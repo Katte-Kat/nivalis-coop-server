@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nivalis-coop-server"
+version = "0.1.0"
+description = "Authoritative game server for a shared Nivalis Nights session (asyncio, standard library only)"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.scripts]
+nivalis-coop = "nivalis_coop.__main__:main"
+
+[tool.setuptools]
+packages = ["nivalis_coop"]

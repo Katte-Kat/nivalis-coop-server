@@ -1,0 +1,34 @@
+# Quadlet unit: the systemd-native way to run this rootless container at boot.
+# Not installed anywhere yet. To use it instead of run.sh:
+#   cp nivalis-coop.container ~/.config/containers/systemd/
+#   systemctl --user daemon-reload && systemctl --user start nivalis-coop
+# (needs `loginctl enable-linger $USER`, safetyzone has it)
+[Unit]
+Description=Nivalis Coop game server
+After=network-online.target
+
+[Container]
+Image=localhost/nivalis-coop:latest
+ContainerName=nivalis-coop
+PublishPort=27800:27800/tcp
+Volume=nivalis-coop-data:/data:U
+# Create deploy/server.env first (see server.env.example), then enable this line; a missing file stops the start.
+# EnvironmentFile=%h/nivalis-coop/deploy/server.env
+Environment=NIVALIS_COOP_PORT=27800
+ReadOnly=true
+Tmpfs=/tmp:rw,size=16m
+DropCapability=ALL
+NoNewPrivileges=true
+# Quadlet in podman 4.9 has no keys for the resource limits, so they go in as plain arguments.
+PodmanArgs=--memory=256m --cpus=1 --pids-limit=100
+HealthCmd=python -m nivalis_coop --healthcheck
+HealthInterval=30s
+HealthStartPeriod=10s
+HealthRetries=3
+
+[Service]
+Restart=on-failure
+TimeoutStopSec=30
+
+[Install]
+WantedBy=default.target
