@@ -2,7 +2,7 @@
 # Not installed anywhere yet. To use it instead of run.sh:
 #   cp nivalis-coop.container ~/.config/containers/systemd/
 #   systemctl --user daemon-reload && systemctl --user start nivalis-coop
-# (needs `loginctl enable-linger $USER`, safetyzone has it)
+# (needs `loginctl enable-linger $USER`)
 [Unit]
 Description=Nivalis Coop game server
 After=network-online.target

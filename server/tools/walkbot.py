@@ -1,6 +1,6 @@
 """Demo/test bot: joins, stands a few metres in front of another player and walks a small circle there.
 
-    PYTHONPATH=server python3 server/tools/walkbot.py 127.0.0.1 27800 --follow KatTest
+    PYTHONPATH=server python3 server/tools/walkbot.py 127.0.0.1 27800 --follow PlayerName
 
 Useful to see name tags and interpolation in the game without a second player.
 """
