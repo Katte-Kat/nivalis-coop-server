@@ -57,3 +57,7 @@ cd server && PYTHONPATH=. python3 -m unittest discover -s tests
 There is **no TLS**: the password and chat travel in clear text. Use a throwaway password, not one you use
 elsewhere, and prefer a VPN or SSH tunnel for play outside your LAN. The server rate-limits clients and drops
 those that misbehave, but it is a hobby server: do not expose it with an empty password to the internet.
+
+## License
+
+MIT, see [LICENSE](LICENSE).
