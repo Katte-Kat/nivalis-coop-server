@@ -149,6 +149,10 @@ leader's game:
 * **Venue settings** (menu and prices, open or closed, every staff member's working hours, tasks and wage): the game
   that changed them sends an `event` `coop.venue` with the venue's whole settings; every game in the world, the
   leader's among them, takes them over.
+* **New and removed objects**: an item taken out of an inventory and put down is announced as `event`
+  `coop.spawn` `{world, id, item, scene, p:[x,y,z,qx,qy,qz,qw]}`; every other game makes the same item there (a
+  ghost from the item's prefab, registered with the game, which then shows it and saves it). An object picked up and
+  stored is `coop.store` `{world, id}`; the others take it out of their world. Moves use the placing player's id.
 * **Inventories** stay per player: the server keeps each player's inventory per world (`pdata` key `inv`) and the mod
   puts it into the game after the world has loaded.
 
