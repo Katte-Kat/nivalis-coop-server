@@ -54,7 +54,7 @@ class Config:
     # what one player keeps per world (inventory): bytes per entry
     max_player_data_bytes: int = 256 * 1024
     # players whose mod is older are told so in the chat when they log in (empty: never)
-    recommended_mod: str = "0.6.1"
+    recommended_mod: str = "0.6.2"
     log_level: str = "INFO"
     admin_socket: str = ""
 

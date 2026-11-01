@@ -5,6 +5,8 @@
   --mode other   votes for a different answer than the first voter (forces the random draw)
   --mode same    votes for the same answer as the first voter
   --mode silent  never votes (the vote window decides)
+  --start TREE   starts that conversation itself after --start-after seconds (with --person, the person's guid):
+                 every game in the world must open it
 Prints every conversation packet it sees.
 """
 from __future__ import annotations
@@ -26,6 +28,9 @@ async def main() -> int:
     ap.add_argument("--mode", choices=["other", "same", "silent"], default="other")
     ap.add_argument("--seconds", type=float, default=240)
     ap.add_argument("--password")
+    ap.add_argument("--start")
+    ap.add_argument("--person")
+    ap.add_argument("--start-after", type=float, default=20)
     args = ap.parse_args()
 
     client = await Client.open(args.host, args.port)
@@ -38,7 +43,12 @@ async def main() -> int:
 
     voted: set[str] = set()
     end = time.monotonic() + args.seconds
+    start_at = time.monotonic() + args.start_after if args.start else None
     while time.monotonic() < end:
+        if start_at is not None and time.monotonic() >= start_at:
+            start_at = None
+            client.send({"t": "dlg_start", "tree": args.start, "person": args.person, "prev": None})
+            print(f"started conversation {args.start}", flush=True)
         try:
             msg = await client.recv(1.0)
         except TimeoutError:
