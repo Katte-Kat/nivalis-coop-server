@@ -49,12 +49,12 @@ class Config:
     pause_timeout_seconds: float = 600.0
     max_time_jump_seconds: int = 3 * 86400
     # session leader: the limits of one snapshot of the people in a world (npc_state)
-    max_npcs: int = 400
-    max_npc_bytes: int = 192 * 1024
+    max_npcs: int = 1000
+    max_npc_bytes: int = 512 * 1024
     # what one player keeps per world (inventory): bytes per entry
     max_player_data_bytes: int = 256 * 1024
     # players whose mod is older are told so in the chat when they log in (empty: never)
-    recommended_mod: str = "0.5.0"
+    recommended_mod: str = "0.6.1"
     log_level: str = "INFO"
     admin_socket: str = ""
 
