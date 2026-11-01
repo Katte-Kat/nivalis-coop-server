@@ -24,6 +24,7 @@ async def main() -> int:
     ap.add_argument("--name", default="LeaderBot")
     ap.add_argument("--seconds", type=float, default=60.0)
     ap.add_argument("--password")
+    ap.add_argument("--no-people", action="store_true", help="lead but send no people (the follower keeps its own, paused)")
     args = ap.parse_args()
 
     client = await Client.open(args.host, args.port)
@@ -51,7 +52,7 @@ async def main() -> int:
                 centre = (pose[0] + 4 * math.sin(yaw), pose[1] - 1.6, pose[2] + 4 * math.cos(yaw))
         if msg and msg["t"] == "npc_act":
             print("asked:", msg)
-        if centre is not None:
+        if centre is not None and not args.no_people:
             a = time.monotonic() * 0.8
             tick += 1
             person = {"id": "bot-person-1", "p": [round(centre[0] + math.cos(a), 2), round(centre[1], 2), round(centre[2] + math.sin(a), 2)],

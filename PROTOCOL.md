@@ -34,6 +34,7 @@ or **login** -> **play**.
 | `time_jump` | `to` | the world jumped forward on your side (sleep, fast-forward); only forward, at most `max_time_jump_seconds` |
 | `npc_state` | `tick`, `full`, `npcs` | session leader only: the people near the players. `npcs` = list of `{id, p:[x,y,z], r, w}` (ghost id, position, heading in degrees, walk animation) or `{id, gone:true}`; `full: false` = only what changed |
 | `npc_act` | `npc`, `action`, `data` | ask the session leader's game to do something with a person (forwarded to the leader) |
+| `avatar_set` | `avatar` | the game model you want to be shown as (a model name, kept for your next logins) |
 | `bye` | | clean disconnect |
 
 ## Server -> client
@@ -64,6 +65,8 @@ or **login** -> **play**.
 | `npc_state` | `from`, `tick`, `full`, `npcs`, `at` | the leader's people (relayed, may be dropped when you are slow); a late joiner and a new leader get the last full one, with later partial updates merged in |
 | `npc_act` | `from`, `npc`, `action`, `data` | to the leader only |
 | `npc_reject` | `reason` | `not in a world`, `not the session leader`, `bad npcs`, `too many npcs` (`max_npcs`, `max_npc_bytes`), `no session leader`, `bad action` |
+| `player_avatar` | `id`, `avatar` | a player chose a model (also sent back to you) |
+| `avatar_reject` | `reason` | `bad avatar name` |
 | `chat` | `id` (0 = server), `name`, `text` | |
 | `event` | `from`, `kind`, `data` | |
 
@@ -123,3 +126,9 @@ over (`leader` with `handover: true`) and gets the last snapshot to start from.
 
 In a server world the games never save into the normal single-player saves: their saves and autosaves are stopped,
 and the session leader's game uploads the world to the server instead (at most once a minute).
+
+## Avatars
+
+`login_ok` carries `avatar`: the model you chose on this server, or null on your first login (the mod then lets you
+choose from the game's people models). `players` in `login_ok` and `player_join` carry every player's `avatar`.
+`avatar_set` stores a new choice with the player and tells everybody (`player_avatar`).

@@ -17,7 +17,8 @@ CREATE TABLE IF NOT EXISTS players (
     op          INTEGER NOT NULL DEFAULT 0,
     whitelisted INTEGER NOT NULL DEFAULT 0,
     banned      INTEGER NOT NULL DEFAULT 0,
-    ban_reason  TEXT
+    ban_reason  TEXT,
+    avatar      TEXT
 );
 CREATE TABLE IF NOT EXISTS state (key TEXT PRIMARY KEY, value TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS ledger (
@@ -44,7 +45,7 @@ CREATE TABLE IF NOT EXISTS saves (
 CREATE TABLE IF NOT EXISTS meta (k TEXT PRIMARY KEY, v TEXT NOT NULL);
 """
 
-_FLAGS = {"op", "whitelisted", "banned", "ban_reason"}
+_FLAGS = {"op", "whitelisted", "banned", "ban_reason", "avatar"}
 
 
 class Store:
@@ -54,6 +55,10 @@ class Store:
         self.db.execute("PRAGMA journal_mode=WAL")
         self.db.execute("PRAGMA synchronous=NORMAL")
         self.db.executescript(SCHEMA)
+        # databases from before the avatar column
+        cols = {r["name"] for r in self.db.execute("PRAGMA table_info(players)")}
+        if "avatar" not in cols:
+            self.db.execute("ALTER TABLE players ADD COLUMN avatar TEXT")
 
     # players -------------------------------------------------------------
     def player(self, name: str) -> dict[str, Any] | None:

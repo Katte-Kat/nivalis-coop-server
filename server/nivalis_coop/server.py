@@ -116,7 +116,7 @@ class CoopServer:
 
     def player_list(self, exclude: Session | None = None) -> list[dict[str, Any]]:
         return [
-            {"id": s.id, "name": s.name, "pose": s.pose} for s in self.sessions.values() if s is not exclude
+            {"id": s.id, "name": s.name, "pose": s.pose, "avatar": s.avatar} for s in self.sessions.values() if s is not exclude
         ]
 
     def broadcast(self, msg: dict[str, Any], exclude: Session | None = None) -> None:

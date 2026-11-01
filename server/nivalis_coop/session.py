@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Any
 
 from .protocol import (
     KIND_RE,
+    AVATAR_RE,
     MAX_FRAME_PLAY,
     MAX_FRAME_PRELOGIN,
     PROTOCOL_VERSION,
@@ -65,6 +66,7 @@ class Session:
         self.name = ""
         self.is_op = False
         self.client_mod = "?"
+        self.avatar: str | None = None  # the game model this player is shown as
         self.world: str | None = None  # the server world this player plays in (scopes shared conversations)
         self.pose: list[Any] = [0.0, 0.0, 0.0, 0.0, "idle", ""]
         self.moved = False
@@ -104,6 +106,7 @@ class Session:
             "time_pause": self._on_time_pause,
             "time_jump": self._on_time_jump,
             "npc_state": self._on_npc_state,
+            "avatar_set": self._on_avatar_set,
             "npc_act": self._on_npc_act,
             "bye": self._on_bye,
         }
@@ -239,6 +242,7 @@ class Session:
             old.kick("Logged in from another location")
         self.name = rec["name"] if rec else name
         self.is_op = is_op
+        self.avatar = (rec or {}).get("avatar")
         store.touch(self.name)
         self.id = server.register(self)
         self._last_ack = time.monotonic()
@@ -247,6 +251,7 @@ class Session:
             "id": self.id,
             "name": self.name,
             "op": is_op,
+            "avatar": self.avatar,  # null on the first login: let the player choose one
             "server": cfg.name,
             "motd": cfg.motd,
             "tick_rate": cfg.tick_rate,
@@ -261,7 +266,7 @@ class Session:
         if new_token:
             ok["token"] = new_token
         self.send(ok)
-        server.broadcast({"t": "player_join", "id": self.id, "name": self.name, "pose": self.pose}, exclude=self)
+        server.broadcast({"t": "player_join", "id": self.id, "name": self.name, "pose": self.pose, "avatar": self.avatar}, exclude=self)
         log.info("join %s (id %s, mod %s)", self.label, self.id, self.client_mod)
         return True
 
@@ -326,7 +331,7 @@ class Session:
             return
         self.pose = [round(float(v), 3) for v in vals] + [
             clean_text(msg.get("anim"), 32) or "idle",
-            clean_text(msg.get("scene"), 48) or "",
+            clean_text(msg.get("scene"), 96) or "",
         ]
         self.moved = True
 
@@ -545,6 +550,20 @@ class Session:
             peer = self.server.sessions.get(target)
             if peer is not None:
                 peer.send(packet)
+
+    # avatar ----------------------------------------------------------------------
+    def _on_avatar_set(self, msg: dict[str, Any]) -> None:
+        """The game model this player is shown as. Kept with the player, so it is theirs at every login."""
+        if not self._chat_bucket.take():
+            return self._strike("avatar flood")
+        avatar = msg.get("avatar")
+        if not (isinstance(avatar, str) and AVATAR_RE.fullmatch(avatar)):
+            self.send({"t": "avatar_reject", "reason": "bad avatar name"})
+            return
+        self.avatar = avatar
+        self.server.store.update(self.name, avatar=avatar)
+        log.info("%s is shown as %s", self.label, avatar)
+        self.server.broadcast({"t": "player_avatar", "id": self.id, "avatar": avatar})
 
     # session leader ------------------------------------------------------------
     def _on_npc_state(self, msg: dict[str, Any]) -> None:
