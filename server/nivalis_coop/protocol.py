@@ -25,6 +25,7 @@ _HEADER = struct.Struct(">I")
 NAME_RE = re.compile(r"\w[\w .\-]{0,22}\w")
 KEY_RE = re.compile(r"[a-z][a-z0-9_]{0,31}(?:/[A-Za-z0-9_.\-]{1,48}){1,6}")
 KIND_RE = re.compile(r"[a-z][a-z0-9_.]{0,31}")
+PDATA_KEY_RE = re.compile(r"[a-z][a-z0-9_]{0,31}")
 # a game model name: letters, digits, space and a few marks, as Unity names prefabs
 AVATAR_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9 _.()\-]{0,79}")
 MAX_KEY_LEN = 128

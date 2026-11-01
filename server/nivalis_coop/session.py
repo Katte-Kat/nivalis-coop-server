@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, Any
 from .protocol import (
     KIND_RE,
     AVATAR_RE,
+    PDATA_KEY_RE,
     MAX_FRAME_PLAY,
     MAX_FRAME_PRELOGIN,
     PROTOCOL_VERSION,
@@ -49,6 +50,19 @@ class Bucket:
             self.tokens -= 1
             return True
         return False
+
+
+def _older_mod(client_mod: str, recommended: str) -> str | None:
+    """The client's version if its "NivalisCoop/x.y.z" is older than ``recommended``, else None."""
+    if not recommended or "/" not in client_mod:
+        return None
+    version = client_mod.split("/", 1)[1]
+    try:
+        have = tuple(int(p) for p in version.split("."))
+        want = tuple(int(p) for p in recommended.split("."))
+    except ValueError:
+        return None
+    return version if have < want else None
 
 
 def hash_token(token: str) -> str:
@@ -107,6 +121,7 @@ class Session:
             "time_jump": self._on_time_jump,
             "npc_state": self._on_npc_state,
             "avatar_set": self._on_avatar_set,
+            "pdata_set": self._on_pdata_set,
             "npc_act": self._on_npc_act,
             "bye": self._on_bye,
         }
@@ -268,6 +283,10 @@ class Session:
         self.send(ok)
         server.broadcast({"t": "player_join", "id": self.id, "name": self.name, "pose": self.pose, "avatar": self.avatar}, exclude=self)
         log.info("join %s (id %s, mod %s)", self.label, self.id, self.client_mod)
+        old = _older_mod(self.client_mod, cfg.recommended_mod)
+        if old:
+            self.send({"t": "chat", "id": 0, "name": "Server", "text": f"Your mod {old} is older than {cfg.recommended_mod}: "
+                       "other players and shared people may not work for you. Get the new one from the server owner."})
         return True
 
     # play ----------------------------------------------------------------
@@ -439,6 +458,7 @@ class Session:
                 log.info("%s joined world %s", self.label, slot)
                 self.server.clocks.on_join(self)
                 self.server.authority.on_join(self)
+                self.send({"t": "pdata", "world": slot, "data": self.server.store.player_data(self.name, slot)})
 
     def _dlg_ok(self) -> bool:
         if self.world is None:
@@ -539,7 +559,7 @@ class Session:
             self._strike("event flood")
             return
         kind, data = msg.get("kind"), msg.get("data")
-        if not isinstance(kind, str) or not KIND_RE.fullmatch(kind) or json_size(data) > 4096:
+        if not isinstance(kind, str) or not KIND_RE.fullmatch(kind) or json_size(data) > 32 * 1024:
             self._strike("bad event")
             return
         packet = {"t": "event", "from": self.id, "kind": kind, "data": data}
@@ -564,6 +584,20 @@ class Session:
         self.server.store.update(self.name, avatar=avatar)
         log.info("%s is shown as %s", self.label, avatar)
         self.server.broadcast({"t": "player_avatar", "id": self.id, "avatar": avatar})
+
+    # per player data -------------------------------------------------------------
+    def _on_pdata_set(self, msg: dict[str, Any]) -> None:
+        """Something that is this player's own in their world (their inventory): kept by the server, not in the save."""
+        if not self._state_bucket.take():
+            return self._strike("pdata flood")
+        key = msg.get("key")
+        if self.world is None or not (isinstance(key, str) and PDATA_KEY_RE.fullmatch(key)):
+            self.send({"t": "pdata_reject", "reason": "not in a world" if self.world is None else "bad key"})
+            return
+        if json_size(msg.get("value")) > self.server.cfg.max_player_data_bytes:
+            self.send({"t": "pdata_reject", "reason": "too big"})
+            return
+        self.server.store.set_player_data(self.name, self.world, key, msg.get("value"))
 
     # session leader ------------------------------------------------------------
     def _on_npc_state(self, msg: dict[str, Any]) -> None:

@@ -134,7 +134,7 @@ class Authority:
         if lid is None:
             return "no session leader"
         action, data = msg.get("action"), msg.get("data")
-        if not isinstance(action, str) or not 1 <= len(action) <= 32 or json_size(data) > 2048:
+        if not isinstance(action, str) or not 1 <= len(action) <= 32 or json_size(data) > 32 * 1024:
             return "bad action"
         packet = {"t": "npc_act", "from": s.id, "npc": msg.get("npc"), "action": action, "data": data}
         if lid == s.id:  # the leader may send it too (it then simply does it itself)

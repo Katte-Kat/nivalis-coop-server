@@ -43,6 +43,14 @@ CREATE TABLE IF NOT EXISTS saves (
     PRIMARY KEY (slot, version)
 );
 CREATE TABLE IF NOT EXISTS meta (k TEXT PRIMARY KEY, v TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS player_data (
+    name_key TEXT NOT NULL,
+    slot     TEXT NOT NULL,
+    key      TEXT NOT NULL,
+    value    TEXT NOT NULL,
+    updated  REAL,
+    PRIMARY KEY (name_key, slot, key)
+);
 """
 
 _FLAGS = {"op", "whitelisted", "banned", "ban_reason", "avatar"}
@@ -91,6 +99,18 @@ class Store:
                 raise KeyError(key)
             self.db.execute(f"UPDATE players SET {key}=? WHERE name_key=?", (value, name.casefold()))
         return self.player(name)  # type: ignore[return-value]
+
+    def player_data(self, name: str, slot: str) -> dict[str, Any]:
+        """What belongs to one player in one world (their inventory, for example)."""
+        rows = self.db.execute("SELECT key, value FROM player_data WHERE name_key=? AND slot=?", (name.casefold(), slot))
+        return {r["key"]: json.loads(r["value"]) for r in rows}
+
+    def set_player_data(self, name: str, slot: str, key: str, value: Any) -> None:
+        self.db.execute(
+            "INSERT INTO player_data(name_key, slot, key, value, updated) VALUES(?,?,?,?,?) "
+            "ON CONFLICT(name_key, slot, key) DO UPDATE SET value=excluded.value, updated=excluded.updated",
+            (name.casefold(), slot, key, json.dumps(value, separators=(",", ":")), time.time()),
+        )
 
     def players(self) -> list[dict[str, Any]]:
         return [dict(r) for r in self.db.execute("SELECT * FROM players ORDER BY name_key")]

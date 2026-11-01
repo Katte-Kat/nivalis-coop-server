@@ -35,6 +35,7 @@ or **login** -> **play**.
 | `npc_state` | `tick`, `full`, `npcs` | session leader only: the people near the players. `npcs` = list of `{id, p:[x,y,z], r, w}` (ghost id, position, heading in degrees, walk animation) or `{id, gone:true}`; `full: false` = only what changed |
 | `npc_act` | `npc`, `action`, `data` | ask the session leader's game to do something with a person (forwarded to the leader) |
 | `avatar_set` | `avatar` | the game model you want to be shown as (a model name, kept for your next logins) |
+| `pdata_set` | `key`, `value` | keep something that is yours alone in your current world (key `[a-z][a-z0-9_]*`, at most `max_player_data_bytes`); the mod keeps your inventory as `inv` |
 | `bye` | | clean disconnect |
 
 ## Server -> client
@@ -67,6 +68,8 @@ or **login** -> **play**.
 | `npc_reject` | `reason` | `not in a world`, `not the session leader`, `bad npcs`, `too many npcs` (`max_npcs`, `max_npc_bytes`), `no session leader`, `bad action` |
 | `player_avatar` | `id`, `avatar` | a player chose a model (also sent back to you) |
 | `avatar_reject` | `reason` | `bad avatar name` |
+| `pdata` | `world`, `data` | everything the server keeps for you in the world you just entered (`join_world`) |
+| `pdata_reject` | `reason` | `not in a world`, `bad key`, `too big` |
 | `chat` | `id` (0 = server), `name`, `text` | |
 | `event` | `from`, `kind`, `data` | |
 
@@ -132,3 +135,21 @@ and the session leader's game uploads the world to the server instead (at most o
 `login_ok` carries `avatar`: the model you chose on this server, or null on your first login (the mod then lets you
 choose from the game's people models). `players` in `login_ok` and `player_join` carry every player's `avatar`.
 `avatar_set` stores a new choice with the player and tells everybody (`player_avatar`).
+
+## One savegame for everybody
+
+Only the session leader's game saves a server world, so everything another player changes must also happen in the
+leader's game:
+
+* **Game functions** (buy, sell or rent a venue, apartment or greenhouse; hire, fire or re-task staff; buy ingredients,
+  restock, buy furniture for a venue; greenhouse upgrades; unlocking places): the mod sends `npc_act` with
+  `action: "rpc"` and `data: {m, i, a}` (the function, the object it is called on, the arguments as ids: data objects
+  by name and type, people by guid, ghosts by id, managers by type, the acting player as `{"me": ...}`). The leader's
+  game calls the same function; the money it spends doing so is given back, the actor already booked it.
+* **Venue settings** (menu and prices, open or closed, every staff member's working hours, tasks and wage): the game
+  that changed them sends an `event` `coop.venue` with the venue's whole settings; every game in the world, the
+  leader's among them, takes them over.
+* **Inventories** stay per player: the server keeps each player's inventory per world (`pdata` key `inv`) and the mod
+  puts it into the game after the world has loaded.
+
+After taking over somebody else's change the leader's game stores the world on the server (at most once a minute).
