@@ -48,6 +48,9 @@ class Config:
     clock_broadcast_seconds: float = 1.0
     pause_timeout_seconds: float = 600.0
     max_time_jump_seconds: int = 3 * 86400
+    # session leader: the limits of one snapshot of the people in a world (npc_state)
+    max_npcs: int = 400
+    max_npc_bytes: int = 192 * 1024
     log_level: str = "INFO"
     admin_socket: str = ""
 

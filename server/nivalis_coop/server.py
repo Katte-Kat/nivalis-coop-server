@@ -11,6 +11,7 @@ from typing import Any
 
 from . import __version__
 from .admin import AdminSocket, Commands
+from .authority import Authority
 from .config import Config
 from .clock import WorldClocks
 from .dialogue import DialogueVotes
@@ -36,6 +37,7 @@ class CoopServer:
         self.saves = SaveService(self)
         self.dialogues = DialogueVotes(self)
         self.clocks = WorldClocks(self)
+        self.authority = Authority(self)
         self.commands = Commands(self)
         self.admin = AdminSocket(cfg.admin_path, self.commands)
         self.stop_event = asyncio.Event()

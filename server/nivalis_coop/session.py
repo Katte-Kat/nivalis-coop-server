@@ -82,6 +82,7 @@ class Session:
         self._save_bucket = Bucket(150, 150)  # 150 chunks/s is ~19 MB/s, far above any real link
         self._upload = None  # saves.Upload while this player is uploading a savegame
         self._dlg_bucket = Bucket(20, 20)
+        self._npc_bucket = Bucket(25, 25)  # snapshots ~10/s plus actions
         self._download_task: asyncio.Task | None = None
         self._handlers = {
             "keepalive": self._on_keepalive,
@@ -102,6 +103,8 @@ class Session:
             "time_init": self._on_time_init,
             "time_pause": self._on_time_pause,
             "time_jump": self._on_time_jump,
+            "npc_state": self._on_npc_state,
+            "npc_act": self._on_npc_act,
             "bye": self._on_bye,
         }
 
@@ -168,6 +171,7 @@ class Session:
         if self.id is not None and self.world is not None:
             self.server.dialogues.player_left(self)
             self.server.clocks.player_left(self)
+            self.server.authority.player_left(self)
         if self.id is not None:
             self.server.unregister(self)
         if not self.closing:
@@ -422,12 +426,14 @@ class Session:
                 old = self.world
                 self.server.dialogues.player_left(self)
                 self.server.clocks.player_left(self, old)
+                self.server.authority.player_left(self, old)
                 self.world = None
                 log.info("%s left world %s", self.label, old)
             self.world = slot
             if slot is not None:
                 log.info("%s joined world %s", self.label, slot)
                 self.server.clocks.on_join(self)
+                self.server.authority.on_join(self)
 
     def _dlg_ok(self) -> bool:
         if self.world is None:
@@ -539,6 +545,21 @@ class Session:
             peer = self.server.sessions.get(target)
             if peer is not None:
                 peer.send(packet)
+
+    # session leader ------------------------------------------------------------
+    def _on_npc_state(self, msg: dict[str, Any]) -> None:
+        if not self._npc_bucket.take():
+            return self._strike("npc flood")
+        reason = self.server.authority.npc_state(self, msg)
+        if reason is not None:
+            self.send({"t": "npc_reject", "reason": reason})
+
+    def _on_npc_act(self, msg: dict[str, Any]) -> None:
+        if not self._npc_bucket.take():
+            return self._strike("npc flood")
+        reason = self.server.authority.npc_act(self, msg)
+        if reason is not None:
+            self.send({"t": "npc_reject", "reason": reason})
 
     def _on_bye(self, msg: dict[str, Any]) -> bool:
         return False

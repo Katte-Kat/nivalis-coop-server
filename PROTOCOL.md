@@ -32,6 +32,8 @@ or **login** -> **play**.
 | `time_init` | `seconds`, `rate` | you are the first in the world (the server sent `time_need`): start its clock with your game's time (game seconds) and speed (game seconds per real second) |
 | `time_pause` | `on`, `reason`? | hold the world's clock (a conversation) or release your hold; the server keeps one pause per player |
 | `time_jump` | `to` | the world jumped forward on your side (sleep, fast-forward); only forward, at most `max_time_jump_seconds` |
+| `npc_state` | `tick`, `full`, `npcs` | session leader only: the people near the players. `npcs` = list of `{id, p:[x,y,z], r, w}` (ghost id, position, heading in degrees, walk animation) or `{id, gone:true}`; `full: false` = only what changed |
+| `npc_act` | `npc`, `action`, `data` | ask the session leader's game to do something with a person (forwarded to the leader) |
 | `bye` | | clean disconnect |
 
 ## Server -> client
@@ -58,6 +60,10 @@ or **login** -> **play**.
 | `time_need` | | your world has no clock yet: send `time_init` |
 | `time` | `seconds`, `rate`, `paused`, `reasons`, `jump` | the clock of your world, once a second and on every change; `jump: true` = somebody skipped time, set yours now |
 | `time_reject` | `reason` | `not in a world`, `invalid time`, `no clock`, `jump too far` |
+| `leader` | `world`, `id`, `name`, `handover` | who is the session leader of your world; sent when you enter and when it changes (`handover: true` = the old one left) |
+| `npc_state` | `from`, `tick`, `full`, `npcs`, `at` | the leader's people (relayed, may be dropped when you are slow); a late joiner and a new leader get the last full one, with later partial updates merged in |
+| `npc_act` | `from`, `npc`, `action`, `data` | to the leader only |
+| `npc_reject` | `reason` | `not in a world`, `not the session leader`, `bad npcs`, `too many npcs` (`max_npcs`, `max_npc_bytes`), `no session leader`, `bad action` |
 | `chat` | `id` (0 = server), `name`, `text` | |
 | `event` | `from`, `kind`, `data` | |
 
@@ -102,3 +108,18 @@ server while somebody is in the world and is sent to all once a second. A conver
 Time never runs backwards. A client that is behind adds the missing seconds; one that is ahead holds its own time
 (the game's pause lock) until the server has caught up. A personal menu pauses only that game, afterwards it catches
 up. When the last player leaves, the world's clock is dropped (the world stands still, nobody is there).
+
+
+## Session leader (shared people)
+
+The game simulates its people (customers, staff, background NPCs) itself; the server cannot run that code. So one
+game per world is the **session leader** (Unity Netcode calls this distributed authority): the first player who
+enters the world. Its game simulates as in single player and sends `npc_state` about five times a second, only the
+people near a player (interest management: those the game shows as a Character, plus the ghosts around players far
+from the leader, the nearest first, at most 300). Every other game pauses its own simulation of people
+(AgentGhostSimulator), puts its people where the leader has them, hides the ones the leader does not have and shows a
+stand-in for the ones it has not got. When the leader leaves, the player who has been in the world longest takes
+over (`leader` with `handover: true`) and gets the last snapshot to start from.
+
+In a server world the games never save into the normal single-player saves: their saves and autosaves are stopped,
+and the session leader's game uploads the world to the server instead (at most once a minute).

@@ -4,8 +4,12 @@ A small dedicated server for **Nivalis Nights** multiplayer, in the spirit of a 
 shared world, and every player's game joins it with the companion mod (see the `nivalis-coop-mod` repository).
 
 What the server keeps for everyone: world saves (versioned slots), the shared money account, shared
-state keys (businesses, shop data), conversations with votes and a random draw on disagreement, the world clock
+state keys (businesses, placed furniture), conversations with votes and a random draw on disagreement, the world clock
 (pauses and time jumps), and chat. Only inventories stay per player.
+
+There is no host player. The server picks a **session leader** per world (the first player in it; when they leave,
+the next one takes over by itself). That player's game simulates the people of the world and the server mirrors them
+to everybody else, see "Session leader" in [PROTOCOL.md](PROTOCOL.md).
 
 - Python 3.12, standard library only, one asyncio process, SQLite storage
 - Length-prefixed JSON over TCP, 20 ticks/s, protocol in [PROTOCOL.md](PROTOCOL.md)
